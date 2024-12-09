@@ -315,6 +315,7 @@ class BigInteger {
                     $x = ~$x;
                     $this->is_negative = true;
                 }
+                break;//προσθηκη εντολής τερματισμού για το case -256
             case  256:
                 switch ( BigInteger_MODE ) {
                     case BigInteger_MODE_GMP:

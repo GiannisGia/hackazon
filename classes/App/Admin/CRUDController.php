@@ -262,83 +262,119 @@ class CRUDController extends Controller
      * @return array
      */
     protected function prepareListFields()
-    {
-        $listFields = $this->getListFields();
+{
+    $listFields = $this->getListFields();
+    $result = [];
 
-        $result = [];
-        foreach ($listFields as $field => &$data) {
-            if (is_numeric($field) && is_string($data)) {
-                $field = $data;
-                $data = [];
-            }
+    foreach ($listFields as $field => &$data) {
+        $this->normalizeFieldData($field, $data);
+        $this->setFieldDefaults($field, $data);
+        $this->applyTypeSpecificSettings($field, $data);
+        $field = $this->recursiveCreateRelativeFieldName($field, $data);
+        $result[$field] = $data;
+    }
 
-            $data['original_field_name'] = $field;
+    $listFields = $result;
+    unset($data);
 
-            if (!$data['type'] && $field != $this->model->id_field) {
-                $data['type'] = 'text';
-            }
+    $this->setIdFieldDefaults($listFields);
+}
 
-            if (!array_key_exists('title', $data) || $data['title'] === null) {
-                $data['title'] = ucwords(implode(' ', preg_split('/_+/', $field, -1, PREG_SPLIT_NO_EMPTY)));
-            }
+/**
+ * Κανονικοποιεί το όνομα και τα δεδομένα ενός πεδίου.
+ */
+private function normalizeFieldData(&$field, &$data)
+{
+    if (is_numeric($field) && is_string($data)) {
+        $field = $data;
+        $data = [];
+    }
+    $data['original_field_name'] = $field;
+}
 
-            $this->checkSubProp($field, $data);
+/**
+ * Ορίζει προεπιλογές για πεδία.
+ */
+private function setFieldDefaults($field, &$data)
+{
+    if (!$data['type'] && $field != $this->model->id_field) {
+        $data['type'] = 'text';
+    }
 
-            if ($data['type'] == 'link' || $data['is_link']) {
-                $data['is_link'] = true;
-                if (!$data['template']) {
-                    $data['template'] = '/admin/' . $this->alias . '/edit/%' . $this->model->id_field . '%';
-                }
-            }
+    if (!array_key_exists('title', $data) || $data['title'] === null) {
+        $data['title'] = ucwords(implode(' ', preg_split('/_+/', $field, -1, PREG_SPLIT_NO_EMPTY)));
+    }
 
-            if ($data['type'] == 'image') {
-                if (!$data['max_width']) {
-                    $data['max_width'] = 40;
-                }
+    $this->checkSubProp($field, $data);
+}
 
-                if (!$data['max_height']) {
-                    $data['max_height'] = 30;
-                }
+/**
+ * Εφαρμόζει ρυθμίσεις ανάλογα με τον τύπο του πεδίου.
+ */
+private function applyTypeSpecificSettings($field, &$data)
+{
+    if ($data['type'] == 'link' || $data['is_link']) {
+        $this->setLinkFieldDefaults($data);
+    }
 
-                if (!$data['dir_path']) {
-                    $data['dir_path'] = '/images/';
-                }
+    if ($data['type'] == 'image') {
+        $this->setImageFieldDefaults($data);
+    }
 
-                if (!array_key_exists('orderable', $data)) {
-                    $data['orderable'] = false;
-                }
+    if ($data['extra']) {
+        $data['orderable'] = false;
+        $data['searching'] = false;
+    }
 
-                if (!array_key_exists('searching', $data)) {
-                    $data['searching'] = false;
-                }
-            }
+    if (!array_key_exists('orderable', $data)) {
+        $data['orderable'] = true;
+    }
 
-            if ($data['extra']) {
-                $data['orderable'] = false;
-                $data['searching'] = false;
-            }
+    if (!array_key_exists('searching', $data)) {
+        $data['searching'] = true;
+    }
+}
 
-            if (!array_key_exists('orderable', $data)) {
-                $data['orderable'] = true;
-            }
+/**
+ * Ρυθμίσεις για πεδία τύπου σύνδεσμου.
+ */
+private function setLinkFieldDefaults(&$data)
+{
+    $data['is_link'] = true;
 
-            if (!array_key_exists('searching', $data)) {
-                $data['searching'] = true;
-            }
+    if (!$data['template']) {
+        $data['template'] = '/admin/' . $this->alias . '/edit/%' . $this->model->id_field . '%';
+    }
+}
 
-            $field = $this->recursiveCreateRelativeFieldName($field, $data);
+/**
+ * Ρυθμίσεις για πεδία τύπου εικόνας.
+ */
+private function setImageFieldDefaults(&$data)
+{
+    $data['max_width'] = $data['max_width'] ?? 40;
+    $data['max_height'] = $data['max_height'] ?? 30;
+    $data['dir_path'] = $data['dir_path'] ?? '/images/';
+    $data['orderable'] = $data['orderable'] ?? false;
+    $data['searching'] = $data['searching'] ?? false;
+}
 
-            $result[$field] = $data;
+/**
+ * Ορίζει προεπιλογές για το ID πεδίο.
+ */
+private function setIdFieldDefaults(&$listFields)
+{
+    if (array_key_exists($this->model->id_field, $listFields)) {
+        $idField = &$listFields[$this->model->id_field];
+
+        if (!array_key_exists('type', $idField)) {
+            $idField['type'] = 'link';
+            $idField['template'] = '/admin/' . $this->alias . '/edit/%' . $this->model->id_field . '%';
         }
-        $listFields = $result;
-        unset($data);
-        if (array_key_exists($this->model->id_field, $listFields)) {
-            if (!array_key_exists('type', $listFields[$this->model->id_field])) {
-                $listFields[$this->model->id_field]['type'] = 'link';
-                $listFields[$this->model->id_field]['template'] = '/admin/' . $this->alias . '/edit/%' . $this->model->id_field . '%';
-            }
-            $listFields[$this->model->id_field]['width'] = '60';
-        }
+        $idField['width'] = '60';
+    }
+}
+
 
         return $listFields;
     }

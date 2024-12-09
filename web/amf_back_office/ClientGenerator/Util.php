@@ -25,21 +25,44 @@ class Amfphp_BackOffice_ClientGenerator_Util {
      * @param string $dst must not exist yet
      */
     public static function recurseCopy($src, $dst) {
-        $dir = opendir($src);
-        if(!file_exists($dst)){
-            mkdir($dst);
+        // Κανονικοποίηση διαδρομών
+        $src = realpath($src);
+        $dst = realpath(dirname($dst)) . DIRECTORY_SEPARATOR . basename($dst);
+    
+        if ($src === false || strpos($src, ALLOWED_BASE_PATH) !== 0) {
+            throw new InvalidArgumentException("Invalid source path.");
         }
-        while (false !== ( $file = readdir($dir))) {
-            if (( $file != '.' ) && ( $file != '..' )) {
-                if (is_dir($src . '/' . $file)) {
-                    self::recurseCopy($src . '/' . $file, $dst . '/' . $file);
+    
+        if ($dst === false || strpos($dst, ALLOWED_BASE_PATH) !== 0) {
+            throw new InvalidArgumentException("Invalid destination path.");
+        }
+    
+        // Άνοιγμα του καταλόγου
+        if (!is_dir($src)) {
+            throw new InvalidArgumentException("Source path is not a directory.");
+        }
+    
+        $dir = opendir($src);
+        if (!file_exists($dst)) {
+            mkdir($dst, 0755, true); // Δημιουργία φακέλου με ασφαλή δικαιώματα
+        }
+    
+        while (false !== ($file = readdir($dir))) {
+            if ($file != '.' && $file != '..') {
+                $srcPath = $src . DIRECTORY_SEPARATOR . $file;
+                $dstPath = $dst . DIRECTORY_SEPARATOR . $file;
+    
+                if (is_dir($srcPath)) {
+                    self::recurseCopy($srcPath, $dstPath);
                 } else {
-                    copy($src . '/' . $file, $dst . '/' . $file);
+                    copy($srcPath, $dstPath);
                 }
             }
         }
+    
         closedir($dir);
     }
+    
     
     /**
      * looks if the server has the necessary zip functions.

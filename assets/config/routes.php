@@ -25,10 +25,13 @@ return array(
             'action' => 'view'
         ),
     ),
+
+    define('NAMESPACE_ADMIN', 'App\\Admin\\');
+
     'admin_error' => array(
         '/admin/error/<id>',
         array(
-            'namespace' => 'App\\Admin\\',
+            'namespace' => 'NAMESPACE_ADMIN',
             'controller' => 'error',
             'action' => 'view'
         ),
@@ -71,7 +74,7 @@ return array(
 
     'admin_option_value' => array('/admin/option-value(/<action>(/<id>))',
         array(
-            'namespace' => 'App\\Admin\\',
+            'namespace' => 'NAMESPACE_ADMIN',
             'controller' => 'OptionValue',
             'action' => 'index',
             'force_hyphens' => true
@@ -80,7 +83,7 @@ return array(
 
     'admin_product_option_value' => array('/admin/product-option-value(/<action>(/<id>))',
         array(
-            'namespace' => 'App\\Admin\\',
+            'namespace' => 'NAMESPACE_ADMIN',
             'controller' => 'ProductOptionValue',
             'action' => 'index',
             'force_hyphens' => true
@@ -95,7 +98,7 @@ return array(
             ),
         ),
         array(
-            'namespace' => 'App\\Admin\\',
+            'namespace' => 'NAMESPACE_ADMIN',
             'controller' => 'home',
 
             'force_hyphens' => true
@@ -104,7 +107,7 @@ return array(
 
     'admin' => array('/admin(/<controller>(/<action>(/<id>)))',
         array(
-            'namespace' => 'App\\Admin\\',
+            'namespace' => 'NAMESPACE_ADMIN',
             'controller' => 'home',
             'action' => 'index'
         )

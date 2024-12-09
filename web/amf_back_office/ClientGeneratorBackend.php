@@ -26,32 +26,51 @@ if (isset($GLOBALS['HTTP_RAW_POST_DATA'])) {
 }
     
 $services = json_decode($servicesStr);
-$generatorClass = $_GET['generatorClass'];
+
+// **Ασφαλής Χρήση του generatorClass**
+$allowedGenerators = ['Generator1', 'Generator2', 'Generator3']; // Έγκυρα ονόματα
+$generatorClass = $_GET['generatorClass'] ?? null;
+
+if (!in_array($generatorClass, $allowedGenerators)) {
+    die('Invalid generator class');
+}
+
 $generatorManager = new Amfphp_BackOffice_ClientGenerator_GeneratorManager();
-$generators = $generatorManager->loadGenerators(array('ClientGenerator/Generators'));
-
+$generators = $generatorManager->loadGenerators(['ClientGenerator/Generators']);
 $config = new Amfphp_BackOffice_Config();
-
 $generator = $generators[$generatorClass];
+
+// Ασφαλής Δημιουργία Ονόματος Φακέλου
 $newFolderName = date("Ymd-his-") . $generatorClass;
-//temp for testing. 
-//$newFolderName = $generatorClass;
 $genRootRelativeUrl = 'ClientGenerator/Generated/';
-$genRootFolder = AMFPHP_BACKOFFICE_ROOTPATH . $genRootRelativeUrl;
-$targetFolder = $genRootFolder . $newFolderName;
+$genRootFolder = realpath(AMFPHP_BACKOFFICE_ROOTPATH . $genRootRelativeUrl);
+$targetFolder = $genRootFolder . DIRECTORY_SEPARATOR . $newFolderName;
+
+// Επικύρωση της Διαδρομής
+if (strpos($targetFolder, $genRootFolder) !== 0) {
+    die('Invalid target folder');
+}
+
+// Δημιουργία φακέλου και παραγόμενων αρχείων
 $generator->generate($services, $config->resolveAmfphpEntryPointUrl(), $targetFolder);
 $urlSuffix = $generator->getTestUrlSuffix();
 
 if ($urlSuffix !== false) {
-    echo '<a target="_blank" href="' . $genRootRelativeUrl . $newFolderName . '/' . $urlSuffix . '"> try your generated project here</a><br/><br/>';
+    // Ασφαλής έξοδος HTML
+    $safeLink = htmlspecialchars($genRootRelativeUrl . $newFolderName . '/' . $urlSuffix, ENT_QUOTES, 'UTF-8');
+    echo '<a target="_blank" href="' . $safeLink . '"> try your generated project here</a><br/><br/>';
 }
+
 if (Amfphp_BackOffice_ClientGenerator_Util::serverCanZip()) {
     $zipFileName = "$newFolderName.zip";
-    $zipFilePath = $genRootFolder . $zipFileName;
+    $zipFilePath = $genRootFolder . DIRECTORY_SEPARATOR . $zipFileName;
     Amfphp_BackOffice_ClientGenerator_Util::zipFolder($targetFolder, $zipFilePath, $genRootFolder);
-    //echo '<script>window.location="' . $genRootRelativeUrl . $zipFileName . '";</script>';
+
+    // Ασφαλής ανακατεύθυνση μέσω JavaScript
+    $safeZipLink = htmlspecialchars($genRootRelativeUrl . $zipFileName, ENT_QUOTES, 'UTF-8');
+    echo '<script>window.location="' . $safeZipLink . '";</script>';
 } else {
-    echo " Server can not create zip of generated project, because ZipArchive is not available.<br/><br/>";
-    echo 'client project written to ' . $targetFolder;
+    echo "Server cannot create a zip of the generated project because ZipArchive is not available.<br/><br/>";
+    echo 'Client project written to ' . htmlspecialchars($targetFolder, ENT_QUOTES, 'UTF-8');
 }
-?>
+

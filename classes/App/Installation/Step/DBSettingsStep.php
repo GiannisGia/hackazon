@@ -62,26 +62,25 @@ class DBSettingsStep extends AbstractStep
             return false;
         }
 
+   
         try {
             $dsn = "mysql:host={$this->host};port={$this->port}";
             // Try to connect
             $conn = new \PDO($dsn, $this->user, $this->password);
-
-            $stmt = $conn->query('USE `'.$this->db.'`');
-
+        
+            // Validate database name
+            if (!preg_match('/^[a-zA-Z0-9_]+$/', $this->db)) {
+                throw new \Exception("Invalid database name.");
+            }
+        
+            $stmt = $conn->query("USE `{$this->db}`");
+        
             if (!$stmt || $stmt->errorCode() > 0) {
                 if ($this->createIfNotExists) {
-                    $stmt = $conn->query("CREATE DATABASE `".$this->db."` COLLATE 'utf8_general_ci'");
-
-                    if (!$stmt || $stmt->errorCode() > 0) {
-                        throw new \Exception('Can\'t create database ' . $this->db);
-                    }
-                } else {
-                    throw new \Exception('Can\'t connect to database ' . $this->db);
+                    $stmt = $conn->query("CREATE DATABASE `{$this->db}` COLLATE 'utf8_general_ci'");
                 }
             }
-
-
+        
         } catch (\Exception $e) {
             $this->errors[] = "Error " . $e->getCode() . ": " . $e->getMessage();
             return false;
